@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Scan Barcode</title>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js"></script>
+</head>
+<body>
+  <h2>📷 สแกนบาร์โค้ด</h2>
+  <video id="video" width="300" height="200" style="border:1px solid black"></video>
+  <script>
+    const codeReader = new ZXing.BrowserBarcodeReader();
+    const videoElement = document.getElementById('video');
+
+    codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
+      if (result) {
+        console.log('Found code: ', result.text);
+        // ส่งกลับไป LINE chat ผ่าน LIFF sendMessage
+        if (window.liff) {
+          liff.init({ liffId: "YOUR_LIFF_ID" }).then(() => {
+            liff.sendMessages([{ type: 'text', text: result.text }])
+                .then(() => liff.closeWindow())
+                .catch(err => console.error(err));
+          });
+        } else {
+          alert("Scanned: " + result.text);
+        }
+      }
+      if (err && !(err instanceof ZXing.NotFoundException)) {
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
