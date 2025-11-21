@@ -1,35 +1,71 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Scan Barcode</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barcode Scanner LIFF</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- ZXing library สำหรับสแกน QR/Barcode -->
   <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    video { width: 100%; max-width: 400px; margin-top: 20px; border: 1px solid #ccc; }
+    button { padding: 10px 20px; margin-top: 10px; font-size: 16px; }
+  </style>
 </head>
 <body>
-  <h2>📷 สแกนบาร์โค้ด</h2>
-  <video id="video" width="300" height="200" style="border:1px solid black"></video>
-  <script>
-    const codeReader = new ZXing.BrowserBarcodeReader();
-    const videoElement = document.getElementById('video');
+  <h1>สแกนบาร์โค้ด / QR Code</h1>
+  <p>เปิดกล้องแล้วสแกนบาร์โค้ดเพื่อส่งไปยัง LINE Chat</p>
+  <button id="startBtn">เริ่มสแกน</button>
+  <video id="video" autoplay></video>
 
-    codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
-      if (result) {
-        console.log('Found code: ', result.text);
-        // ส่งกลับไป LINE chat ผ่าน LIFF sendMessage
-        if (window.liff) {
-          liff.init({ liffId: "YOUR_LIFF_ID" }).then(() => {
-            liff.sendMessages([{ type: 'text', text: result.text }])
-                .then(() => liff.closeWindow())
-                .catch(err => console.error(err));
-          });
-        } else {
-          alert("Scanned: " + result.text);
-        }
-      }
-      if (err && !(err instanceof ZXing.NotFoundException)) {
+  <script>
+    const LIFF_ID = "2008549095-zkEgKWNd"; // <-- ใส่ LIFF ID ของคุณแล้ว
+    let selectedDeviceId;
+    let codeReader;
+
+    async function initLIFF() {
+      await liff.init({ liffId: LIFF_ID });
+      console.log("LIFF initialized");
+    }
+
+    async function startScanner() {
+      codeReader = new ZXing.BrowserBarcodeReader();
+      const video = document.getElementById('video');
+
+      try {
+        const devices = await codeReader.listVideoInputDevices();
+        selectedDeviceId = devices[0].deviceId;
+
+        codeReader.decodeFromVideoDevice(selectedDeviceId, 'video', (result, err) => {
+          if (result) {
+            console.log('Barcode detected: ', result.text);
+            sendMessageToChat(result.text);
+            codeReader.reset(); // หยุดสแกนหลัง detect
+          }
+          if (err && !(err instanceof ZXing.NotFoundException)) {
+            console.error(err);
+          }
+        });
+      } catch (err) {
         console.error(err);
+        alert('ไม่สามารถเข้ากล้องได้');
       }
-    });
+    }
+
+    async function sendMessageToChat(text) {
+      if (!liff.isInClient()) {
+        alert('โปรดเปิด LIFF จาก LINE app เพื่อส่งข้อความ');
+        return;
+      }
+      await liff.sendMessages([{ type: 'text', text }]);
+      alert('ส่งรหัสไปยัง LINE Chat เรียบร้อย!');
+      liff.closeWindow(); // ปิด LIFF หลังส่งข้อความ
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startScanner);
+
+    initLIFF();
   </script>
 </body>
 </html>
