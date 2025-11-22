@@ -8,190 +8,100 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js"></script>
   
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
 
   <style>
-    :root {
-      --primary-color: #1A374D; /* น้ำเงินกรมท่า (ตาม Rich Menu) */
-      --accent-color: #406882;  /* ฟ้าหม่น */
-      --bg-color: #F4F6F8;      /* เทาอ่อนสบายตา */
-      --card-bg: #FFFFFF;
-      --text-color: #333333;
-      --success-color: #28a745;
-    }
-
     body { 
         font-family: 'Prompt', sans-serif; 
-        text-align: center; 
+        background-color: #F4F6F8; 
         margin: 0; 
-        background-color: var(--bg-color); 
-        color: var(--text-color);
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
+        display: flex; 
+        flex-direction: column; 
+        height: 100vh; 
         overflow: hidden;
     }
 
-    /* ส่วนหัว */
+    /* Header */
     header {
-        background: var(--card-bg);
-        padding: 15px 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        z-index: 20;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        background: #fff;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        z-index: 10;
     }
-
-    h3 {
-        margin: 0;
-        font-weight: 600;
-        color: var(--primary-color);
-        font-size: 18px;
-    }
+    h3 { margin: 0; color: #1A374D; font-size: 18px; }
 
     /* พื้นที่กล้อง */
     #video-container {
         position: relative;
         flex-grow: 1;
+        background: #000;
         overflow: hidden;
         display: flex;
-        justify-content: center;
         align-items: center;
-        background: #000;
-        margin: 15px;
-        border-radius: 20px; /* มุมมน */
-        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        justify-content: center;
     }
+    video { width: 100%; height: 100%; object-fit: cover; }
 
-    video { 
-        width: 100%; 
-        height: 100%; 
-        object-fit: cover; 
-        opacity: 0.9;
-    }
-
-    /* กรอบสแกน (Viewfinder) แบบเรียบหรู */
+    /* กรอบเล็ง (ทำมาให้เล็กและชัด เพื่อบังคับ user ให้ถือกล้องนิ่งๆ) */
     .scan-frame {
         position: absolute;
-        width: 70%;
-        height: 250px;
-        z-index: 10;
-        border-radius: 12px;
+        width: 80%;
+        height: 150px; /* กรอบเตี้ยลงเพื่อให้เหมาะกับบาร์โค้ด */
+        border: 2px solid rgba(255, 255, 255, 0.9);
         box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); /* ฉากหลังมืด */
-        border: 2px solid rgba(255, 255, 255, 0.8);
+        border-radius: 8px;
+        z-index: 5;
+    }
+    /* เส้นแดงวิ่งๆ */
+    .laser {
+        width: 100%; height: 2px; background: red;
+        position: absolute; top: 50%;
+        box-shadow: 0 0 4px red;
+        opacity: 0.7;
     }
 
-    /* มุมกรอบ */
-    .scan-frame::before, .scan-frame::after {
-        content: '';
-        position: absolute;
-        width: 30px;
-        height: 30px;
-        border: 4px solid #fff;
-        border-radius: 4px;
-    }
-    .scan-frame::before { top: -2px; left: -2px; border-bottom: none; border-right: none; }
-    .scan-frame::after { bottom: -2px; right: -2px; border-top: none; border-left: none; }
-
-    /* เส้นเลเซอร์นุ่มๆ */
-    .laser-line {
-        position: absolute;
-        width: 100%;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #fff, transparent);
-        opacity: 0.8;
-        animation: scanMove 2.5s infinite ease-in-out;
-    }
-
-    @keyframes scanMove {
-        0% { top: 10%; opacity: 0; }
-        50% { opacity: 1; }
-        100% { top: 90%; opacity: 0; }
-    }
-
-    /* แผงควบคุมด้านล่าง */
+    /* ส่วนควบคุมด้านล่าง */
     .controls {
-        padding: 20px 30px 40px 30px; /* ด้านล่างเผื่อ iPhone รุ่นใหม่ */
-        background: var(--card-bg);
-        border-top-left-radius: 25px;
-        border-top-right-radius: 25px;
-        box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
-        z-index: 20;
+        background: #fff;
+        padding: 20px;
+        border-radius: 20px 20px 0 0;
+        text-align: center;
+        z-index: 10;
     }
-
-    p#status {
-        margin: 0 0 15px 0; 
-        font-size: 14px; 
-        color: var(--accent-color);
-        font-weight: 500;
+    #status { color: #406882; margin-bottom: 10px; font-size: 14px; }
+    
+    button {
+        padding: 10px 20px;
+        border-radius: 30px;
+        border: 1px solid #1A374D;
+        background: #fff;
+        color: #1A374D;
+        font-family: 'Prompt';
+        cursor: pointer;
     }
-
-    /* ปุ่มกดสไตล์ Modern Pill */
-    button { 
-        padding: 14px 28px; 
-        font-size: 16px; 
-        font-family: 'Prompt', sans-serif;
-        font-weight: 600;
-        border: none;
-        border-radius: 50px; /* ทรงแคปซูล */
-        cursor: pointer; 
-        margin: 5px;
-        transition: transform 0.2s, box-shadow 0.2s;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    #startBtn {
-        /* ปุ่มซ่อนไว้ */
-    }
-
-    #switchBtn { 
-        background-color: var(--bg-color); 
-        color: var(--primary-color); 
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
-
-    button:active {
-        transform: scale(0.95);
-    }
-
   </style>
 </head>
 <body>
 
   <header>
-    <h3>แหลมฉบังเครื่องเขียน (SCAN)</h3>
+    <h3>สแกนสินค้า (หน่วย: ชิ้น)</h3>
   </header>
 
   <div id="video-container">
     <div class="scan-frame">
-        <div class="laser-line"></div>
+        <div class="laser"></div>
     </div>
     <video id="video" autoplay muted playsinline></video>
   </div>
 
   <div class="controls">
-    <p id="status">กำลังเชื่อมต่อกล้อง...</p>
-    <button id="switchBtn" style="display:none;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-        </svg>
-        สลับกล้อง
-    </button>
+    <p id="status">กำลังเปิดกล้อง...</p>
+    <button id="switchBtn" style="display:none;">สลับกล้อง</button>
   </div>
 
   <script>
-    // =========================================
-    // LIFF ID (ค่าเดิม)
-    // =========================================
     const LIFF_ID = "2008549095-zkEgKWNd"; 
-    // =========================================
-
     let codeReader;
     let selectedDeviceId;
     let videoInputDevices = [];
@@ -200,62 +110,71 @@
     async function initLIFF() {
       try {
         await liff.init({ liffId: LIFF_ID });
-        document.getElementById('status').innerText = "พร้อมสแกนสินค้า";
-        startScanner(); 
+        startScanner();
       } catch (err) {
-        document.getElementById('status').innerText = "เกิดข้อผิดพลาด: " + err;
+        document.getElementById('status').innerText = "Error: " + err;
       }
     }
 
     async function startScanner() {
-      codeReader = new ZXing.BrowserBarcodeReader();
+      // 1. แก้สแกนยาก: ระบุเจาะจงว่าเอาแค่ 1D Barcode (EAN/CODE128)
+      // จะช่วยลดภาระ CPU ทำให้โฟกัสไวขึ้นมาก และไม่ไปจับ QR มั่วๆ
+      const hints = new Map();
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+        ZXing.BarcodeFormat.EAN_13,
+        ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.CODE_128,
+        ZXing.BarcodeFormat.UPC_A
+      ]);
       
+      codeReader = new ZXing.BrowserBarcodeReader(hints);
+
       try {
         videoInputDevices = await codeReader.listVideoInputDevices();
-        
-        if (videoInputDevices.length === 0) {
-            document.getElementById('status').innerText = "ไม่พบกล้องในอุปกรณ์";
+        if (videoInputDevices.length == 0) {
+            document.getElementById('status').innerText = "ไม่พบกล้อง";
             return;
         }
 
-        selectedDeviceId = videoInputDevices[0].deviceId;
+        // 2. แก้กล้อง 0.6x: เลือกล้องที่ไม่ใช่ Wide เป็นค่าเริ่มต้น
+        selectedDeviceId = selectMainCamera(videoInputDevices);
         
-        // หากล้องหลัง
-        for (let i = 0; i < videoInputDevices.length; i++) {
-            const label = videoInputDevices[i].label.toLowerCase();
-            if (label.includes('back') || label.includes('rear') || label.includes('environment')) {
-                selectedDeviceId = videoInputDevices[i].deviceId;
-                currentDeviceIndex = i;
-                break;
-            }
-        }
-
         startDecoding(selectedDeviceId);
 
         if (videoInputDevices.length > 1) {
-            document.getElementById('switchBtn').style.display = 'inline-flex';
+            document.getElementById('switchBtn').style.display = 'inline-block';
         }
-
       } catch (err) {
-        console.error(err);
-        document.getElementById('status').innerText = "เข้าถึงกล้องไม่ได้: " + err;
+        document.getElementById('status').innerText = "เข้าถึงกล้องไม่ได้";
       }
+    }
+
+    // ฟังก์ชันกรองกล้อง: พยายามหลีกเลี่ยงเลนส์ Wide/Ultra Wide
+    function selectMainCamera(devices) {
+        // หา index ของกล้องหลังตัวหลัก
+        for (let i = 0; i < devices.length; i++) {
+            const label = devices[i].label.toLowerCase();
+            // เงื่อนไข: เป็นกล้องหลัง (Back) และไม่มีคำว่า Wide หรือ 0.5x
+            if ((label.includes('back') || label.includes('rear')) && 
+                !label.includes('wide') && !label.includes('ultra') && !label.includes('0.5')) {
+                currentDeviceIndex = i;
+                return devices[i].deviceId;
+            }
+        }
+        // ถ้าหาไม่เจอจริงๆ ให้เอาตัวแรกสุดไปเลย
+        return devices[0].deviceId;
     }
 
     function startDecoding(deviceId) {
         codeReader.reset();
         document.getElementById('status').innerText = "เล็งบาร์โค้ดให้อยู่ในกรอบ";
-        document.getElementById('status').style.color = "#406882";
         
         codeReader.decodeFromVideoDevice(deviceId, 'video', (result, err) => {
             if (result) {
-                console.log(result);
-                // เปลี่ยนสถานะเมื่อเจอ
-                document.getElementById('status').innerText = "✅ พบรหัส: " + result.text;
-                document.getElementById('status').style.color = "#28a745"; // สีเขียว
-                playSound(); 
-                sendMessageToChat(result.text);
-                codeReader.reset(); 
+                playSound();
+                document.getElementById('status').innerText = "✅ พบ: " + result.text;
+                sendMessage(result.text);
+                codeReader.reset(); // หยุดชั่วคราวหลังเจอ
             }
         });
     }
@@ -265,37 +184,41 @@
         currentDeviceIndex = (currentDeviceIndex + 1) % videoInputDevices.length;
         selectedDeviceId = videoInputDevices[currentDeviceIndex].deviceId;
         startDecoding(selectedDeviceId);
-        document.getElementById('status').innerText = "กำลังสลับกล้อง...";
     });
 
-    async function sendMessageToChat(text) {
+    async function sendMessage(text) {
+      // 3. แก้หน่วย: ส่ง Barcode + ข้อความระบุหน่วย
+      // ตรงนี้คือสิ่งที่ LIFF จะพิมพ์แทน User
+      const msg = `${text} 1 ชิ้น`; 
+
       if (!liff.isInClient()) {
-        alert('Barcode: ' + text + '\n(เปิดใน LINE เพื่อส่งข้อมูล)');
+        alert("Test Result:\n" + msg);
+        // window.location.reload(); // รีเฟรชเพื่อเริ่มใหม่ตอนเทสบนคอม
         return;
       }
+
       try {
-        await liff.sendMessages([{ type: 'text', text: text }]);
-        liff.closeWindow(); 
+        await liff.sendMessages([{ type: 'text', text: msg }]);
+        liff.closeWindow();
       } catch (err) {
-        alert('ส่งข้อมูลไม่สำเร็จ: ' + err);
+        alert('ส่งไม่สำเร็จ: ' + err);
       }
     }
 
     function playSound() {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        oscillator.type = 'sine'; // เสียงนุ่มๆ แบบเครื่องคิดเงิน
-        oscillator.frequency.value = 1500; 
-        gainNode.gain.value = 0.1;
-        oscillator.start();
-        setTimeout(() => oscillator.stop(), 100);
+        // เสียงปี๊บสั้นๆ
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.frequency.value = 1500;
+        g.gain.value = 0.1;
+        osc.start();
+        setTimeout(() => osc.stop(), 100);
     }
 
     initLIFF();
-
   </script>
 </body>
 </html>
