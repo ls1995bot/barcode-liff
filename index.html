@@ -7,13 +7,13 @@
   
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js"></script>
-  
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
 
   <style>
+    /* Reset & Base Styles */
     body { 
         font-family: 'Prompt', sans-serif; 
-        background-color: #F4F6F8; 
+        background-color: #000; 
         margin: 0; 
         display: flex; 
         flex-direction: column; 
@@ -21,17 +21,17 @@
         overflow: hidden;
     }
 
-    /* Header */
     header {
-        background: #fff;
-        padding: 15px;
+        background: #1A374D;
+        color: white;
+        padding: 12px;
         text-align: center;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        z-index: 10;
+        z-index: 20;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
-    h3 { margin: 0; color: #1A374D; font-size: 18px; }
+    h3 { margin: 0; font-size: 16px; font-weight: 500; letter-spacing: 0.5px; }
 
-    /* พื้นที่กล้อง */
+    /* Video Area */
     #video-container {
         position: relative;
         flex-grow: 1;
@@ -41,62 +41,88 @@
         align-items: center;
         justify-content: center;
     }
-    video { width: 100%; height: 100%; object-fit: cover; }
+    
+    video { 
+        width: 100%; 
+        height: 100%; 
+        object-fit: cover; 
+    }
 
-    /* กรอบเล็ง (ทำมาให้เล็กและชัด เพื่อบังคับ user ให้ถือกล้องนิ่งๆ) */
+    /* --- ส่วนสำคัญที่ปรับแก้เพื่อปากกา --- */
+    /* ปรับกรอบให้เตี้ยลง (Slit) เพื่อบังคับให้อ่านเฉพาะตรงกลางที่ชัดที่สุด */
     .scan-frame {
         position: absolute;
-        width: 80%;
-        height: 150px; /* กรอบเตี้ยลงเพื่อให้เหมาะกับบาร์โค้ด */
-        border: 2px solid rgba(255, 255, 255, 0.9);
-        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); /* ฉากหลังมืด */
+        width: 75%;         /* กว้างพอประมาณ */
+        height: 100px;      /* ***เตี้ยลง*** เพื่อตัดส่วนโค้งบนล่างทิ้ง */
+        border: 2px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75); /* ฉากหลังมืดลงให้ user โฟกัสง่าย */
         border-radius: 8px;
-        z-index: 5;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    /* เส้นแดงวิ่งๆ */
-    .laser {
-        width: 100%; height: 2px; background: red;
-        position: absolute; top: 50%;
-        box-shadow: 0 0 4px red;
-        opacity: 0.7;
+    
+    /* เส้นเล็งตรงกลาง */
+    .laser-line {
+        width: 90%;
+        height: 2px;
+        background: #ef4444;
+        box-shadow: 0 0 4px #ef4444;
+        opacity: 0.8;
     }
 
-    /* ส่วนควบคุมด้านล่าง */
+    /* Controls */
     .controls {
         background: #fff;
         padding: 20px;
         border-radius: 20px 20px 0 0;
         text-align: center;
-        z-index: 10;
+        z-index: 20;
     }
-    #status { color: #406882; margin-bottom: 10px; font-size: 14px; }
     
+    #status { 
+        color: #333; 
+        margin: 0 0 10px 0; 
+        font-size: 15px; 
+        font-weight: 600;
+    }
+    
+    .hint-text {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 15px;
+    }
+
     button {
-        padding: 10px 20px;
+        padding: 10px 25px;
         border-radius: 30px;
-        border: 1px solid #1A374D;
-        background: #fff;
-        color: #1A374D;
+        border: none;
+        background: #1A374D;
+        color: #fff;
         font-family: 'Prompt';
+        font-size: 14px;
         cursor: pointer;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
 
   <header>
-    <h3>สแกนสินค้า (หน่วย: ชิ้น)</h3>
+    <h3>สแกนสินค้า (Auto Focus)</h3>
   </header>
 
   <div id="video-container">
     <div class="scan-frame">
-        <div class="laser"></div>
+        <div class="laser-line"></div>
     </div>
     <video id="video" autoplay muted playsinline></video>
   </div>
 
   <div class="controls">
     <p id="status">กำลังเปิดกล้อง...</p>
+    <p class="hint-text">💡 หากสแกนยาก: ให้ถอยห่างออกมานิดนึง<br>หรือหมุนสินค้าช้าๆ เพื่อหลบแสงสะท้อน</p>
     <button id="switchBtn" style="display:none;">สลับกล้อง</button>
   </div>
 
@@ -106,20 +132,21 @@
     let selectedDeviceId;
     let videoInputDevices = [];
     let currentDeviceIndex = 0;
+    let isScanning = false; // ตัวกันซ้ำ
 
     async function initLIFF() {
       try {
         await liff.init({ liffId: LIFF_ID });
         startScanner();
       } catch (err) {
-        document.getElementById('status').innerText = "Error: " + err;
+        document.getElementById('status').innerText = "LIFF Error: " + err;
       }
     }
 
     async function startScanner() {
-      // 1. แก้สแกนยาก: ระบุเจาะจงว่าเอาแค่ 1D Barcode (EAN/CODE128)
-      // จะช่วยลดภาระ CPU ทำให้โฟกัสไวขึ้นมาก และไม่ไปจับ QR มั่วๆ
       const hints = new Map();
+      
+      // 1. Strict Formats: โฟกัสแค่บาร์โค้ดสินค้าเท่านั้น ลดภาระการคำนวณ
       hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
         ZXing.BarcodeFormat.EAN_13,
         ZXing.BarcodeFormat.EAN_8,
@@ -127,7 +154,13 @@
         ZXing.BarcodeFormat.UPC_A
       ]);
       
+      // 2. Try Harder: สั่งให้ Algorithm พยายามอ่านภาพที่เบลอหรือบิดเบี้ยวมากขึ้น
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
       codeReader = new ZXing.BrowserBarcodeReader(hints);
+      
+      // 3. Stabilization: เว้นจังหวะ 500ms ระหว่างเฟรม เพื่อให้กล้อง Auto Focus ทัน
+      codeReader.timeBetweenScansMillis = 500; 
 
       try {
         videoInputDevices = await codeReader.listVideoInputDevices();
@@ -136,9 +169,7 @@
             return;
         }
 
-        // 2. แก้กล้อง 0.6x: เลือกล้องที่ไม่ใช่ Wide เป็นค่าเริ่มต้น
         selectedDeviceId = selectMainCamera(videoInputDevices);
-        
         startDecoding(selectedDeviceId);
 
         if (videoInputDevices.length > 1) {
@@ -149,32 +180,38 @@
       }
     }
 
-    // ฟังก์ชันกรองกล้อง: พยายามหลีกเลี่ยงเลนส์ Wide/Ultra Wide
+    // Logic เลือกกล้อง: หลบ Wide Angle (0.6x)
     function selectMainCamera(devices) {
-        // หา index ของกล้องหลังตัวหลัก
         for (let i = 0; i < devices.length; i++) {
             const label = devices[i].label.toLowerCase();
-            // เงื่อนไข: เป็นกล้องหลัง (Back) และไม่มีคำว่า Wide หรือ 0.5x
             if ((label.includes('back') || label.includes('rear')) && 
                 !label.includes('wide') && !label.includes('ultra') && !label.includes('0.5')) {
                 currentDeviceIndex = i;
                 return devices[i].deviceId;
             }
         }
-        // ถ้าหาไม่เจอจริงๆ ให้เอาตัวแรกสุดไปเลย
         return devices[0].deviceId;
     }
 
     function startDecoding(deviceId) {
         codeReader.reset();
         document.getElementById('status').innerText = "เล็งบาร์โค้ดให้อยู่ในกรอบ";
-        
+        document.getElementById('status').style.color = "#333";
+        isScanning = true;
+
         codeReader.decodeFromVideoDevice(deviceId, 'video', (result, err) => {
-            if (result) {
+            if (result && isScanning) {
+                // ป้องกันการอ่านซ้ำรัวๆ
+                isScanning = false; 
+                
                 playSound();
-                document.getElementById('status').innerText = "✅ พบ: " + result.text;
+                document.getElementById('status').innerText = "✅ กำลังส่งข้อมูล...";
+                document.getElementById('status').style.color = "#28a745";
+                
+                // หยุดกล้องชั่วคราวเพื่อประหยัดแบตระหว่างส่ง
+                codeReader.reset(); 
+                
                 sendMessage(result.text);
-                codeReader.reset(); // หยุดชั่วคราวหลังเจอ
             }
         });
     }
@@ -187,13 +224,13 @@
     });
 
     async function sendMessage(text) {
-      // 3. แก้หน่วย: ส่ง Barcode + ข้อความระบุหน่วย
-      // ตรงนี้คือสิ่งที่ LIFF จะพิมพ์แทน User
+      // Format ข้อความ: เลขบาร์โค้ด + จำนวน 1 ชิ้น
       const msg = `${text} 1 ชิ้น`; 
 
       if (!liff.isInClient()) {
-        alert("Test Result:\n" + msg);
-        // window.location.reload(); // รีเฟรชเพื่อเริ่มใหม่ตอนเทสบนคอม
+        alert("Simulate Send:\n" + msg);
+        // รีเซ็ตให้สแกนต่อได้ทันทีถ้าเทสบนคอม
+        setTimeout(() => startDecoding(selectedDeviceId), 1000); 
         return;
       }
 
@@ -202,20 +239,21 @@
         liff.closeWindow();
       } catch (err) {
         alert('ส่งไม่สำเร็จ: ' + err);
+        // ถ้าส่งไม่ผ่าน ให้กลับมาเปิดกล้องสแกนใหม่
+        startDecoding(selectedDeviceId);
       }
     }
 
     function playSound() {
-        // เสียงปี๊บสั้นๆ
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
         osc.connect(g);
         g.connect(ctx.destination);
-        osc.frequency.value = 1500;
+        osc.frequency.value = 1800; // เสียงสูงแหลมจะได้ยินชัด
         g.gain.value = 0.1;
         osc.start();
-        setTimeout(() => osc.stop(), 100);
+        setTimeout(() => osc.stop(), 150);
     }
 
     initLIFF();
