@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
 
   <style>
-    /* Reset & Base Styles */
+    /* พื้นฐาน */
     body { 
         font-family: 'Prompt', sans-serif; 
         background-color: #000; 
@@ -24,14 +24,13 @@
     header {
         background: #1A374D;
         color: white;
-        padding: 12px;
+        padding: 15px;
         text-align: center;
         z-index: 20;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
-    h3 { margin: 0; font-size: 16px; font-weight: 500; letter-spacing: 0.5px; }
+    h3 { margin: 0; font-size: 18px; font-weight: 500; }
 
-    /* Video Area */
+    /* พื้นที่แสดงผลกล้อง */
     #video-container {
         position: relative;
         flex-grow: 1;
@@ -48,73 +47,86 @@
         object-fit: cover; 
     }
 
-    /* --- ส่วนสำคัญที่ปรับแก้เพื่อปากกา --- */
-    /* ปรับกรอบให้เตี้ยลง (Slit) เพื่อบังคับให้อ่านเฉพาะตรงกลางที่ชัดที่สุด */
+    /* --- ปรับปรุงกรอบสแกน (Focus Area) --- */
     .scan-frame {
         position: absolute;
-        width: 75%;         /* กว้างพอประมาณ */
-        height: 100px;      /* ***เตี้ยลง*** เพื่อตัดส่วนโค้งบนล่างทิ้ง */
-        border: 2px solid rgba(255, 255, 255, 0.8);
-        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75); /* ฉากหลังมืดลงให้ user โฟกัสง่าย */
-        border-radius: 8px;
+        width: 85%;         /* กว้างเกือบเต็มจอ */
+        height: 80px;       /* ***แคบลงมาก*** (เหมือนไม้บรรทัด) เพื่อบังคับให้เล็งกลางปากกา */
+        border: 2px solid rgba(255, 255, 255, 0.9);
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); /* ฉากหลังมืดลงให้เห็นกรอบชัดๆ */
+        border-radius: 10px;
         z-index: 10;
         display: flex;
         align-items: center;
         justify-content: center;
+        pointer-events: none; /* ให้แตะทะลุไปโฟกัสได้ */
     }
     
-    /* เส้นเล็งตรงกลาง */
+    /* เส้นเลเซอร์สีแดง เข้มและชัดขึ้น */
     .laser-line {
-        width: 90%;
-        height: 2px;
-        background: #ef4444;
-        box-shadow: 0 0 4px #ef4444;
-        opacity: 0.8;
+        width: 95%;
+        height: 3px; /* หนาขึ้น */
+        background: #ff0000;
+        box-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
+        opacity: 0.9;
     }
 
-    /* Controls */
+    /* ข้อความแนะนำตรงกลางจอ */
+    .guide-text {
+        position: absolute;
+        top: -30px;
+        width: 100%;
+        text-align: center;
+        color: white;
+        font-size: 14px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    /* แผงควบคุมด้านล่าง */
     .controls {
         background: #fff;
         padding: 20px;
         border-radius: 20px 20px 0 0;
         text-align: center;
         z-index: 20;
+        min-height: 100px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
     }
     
     #status { 
         color: #333; 
         margin: 0 0 10px 0; 
-        font-size: 15px; 
+        font-size: 16px; 
         font-weight: 600;
-    }
-    
-    .hint-text {
-        font-size: 12px;
-        color: #666;
-        margin-bottom: 15px;
     }
 
     button {
-        padding: 10px 25px;
-        border-radius: 30px;
+        padding: 12px 30px;
+        border-radius: 50px;
         border: none;
         background: #1A374D;
         color: #fff;
         font-family: 'Prompt';
-        font-size: 14px;
+        font-size: 16px;
         cursor: pointer;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        transition: all 0.2s;
     }
+    button:active { transform: scale(0.95); }
   </style>
 </head>
 <body>
 
   <header>
-    <h3>สแกนสินค้า (Auto Focus)</h3>
+    <h3>สแกนสินค้า</h3>
   </header>
 
   <div id="video-container">
     <div class="scan-frame">
+        <div class="guide-text">เล็งเส้นแดงให้ทับกลางบาร์โค้ด</div>
         <div class="laser-line"></div>
     </div>
     <video id="video" autoplay muted playsinline></video>
@@ -122,7 +134,6 @@
 
   <div class="controls">
     <p id="status">กำลังเปิดกล้อง...</p>
-    <p class="hint-text">💡 หากสแกนยาก: ให้ถอยห่างออกมานิดนึง<br>หรือหมุนสินค้าช้าๆ เพื่อหลบแสงสะท้อน</p>
     <button id="switchBtn" style="display:none;">สลับกล้อง</button>
   </div>
 
@@ -131,8 +142,7 @@
     let codeReader;
     let selectedDeviceId;
     let videoInputDevices = [];
-    let currentDeviceIndex = 0;
-    let isScanning = false; // ตัวกันซ้ำ
+    let isScanning = false; 
 
     async function initLIFF() {
       try {
@@ -145,22 +155,18 @@
 
     async function startScanner() {
       const hints = new Map();
-      
-      // 1. Strict Formats: โฟกัสแค่บาร์โค้ดสินค้าเท่านั้น ลดภาระการคำนวณ
+      // เน้นอ่าน Code-128 (ปากกาชอบใช้) และ EAN
       hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
         ZXing.BarcodeFormat.EAN_13,
-        ZXing.BarcodeFormat.EAN_8,
-        ZXing.BarcodeFormat.CODE_128,
-        ZXing.BarcodeFormat.UPC_A
+        ZXing.BarcodeFormat.CODE_128, 
+        ZXing.BarcodeFormat.EAN_8
       ]);
-      
-      // 2. Try Harder: สั่งให้ Algorithm พยายามอ่านภาพที่เบลอหรือบิดเบี้ยวมากขึ้น
-      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true); // โหมดพยายามอ่านภาพเบลอ
 
       codeReader = new ZXing.BrowserBarcodeReader(hints);
       
-      // 3. Stabilization: เว้นจังหวะ 500ms ระหว่างเฟรม เพื่อให้กล้อง Auto Focus ทัน
-      codeReader.timeBetweenScansMillis = 500; 
+      // *** Speed Up ***: ลดเวลาหน่วงเหลือ 200ms (เร็วขึ้น) เพื่อจับภาพตอนมือสั่นได้ดีขึ้น
+      codeReader.timeBetweenScansMillis = 200; 
 
       try {
         videoInputDevices = await codeReader.listVideoInputDevices();
@@ -169,6 +175,7 @@
             return;
         }
 
+        // เลือกกล้องหลังตัวหลัก (หลบเลนส์ Wide)
         selectedDeviceId = selectMainCamera(videoInputDevices);
         startDecoding(selectedDeviceId);
 
@@ -180,14 +187,13 @@
       }
     }
 
-    // Logic เลือกกล้อง: หลบ Wide Angle (0.6x)
     function selectMainCamera(devices) {
-        for (let i = 0; i < devices.length; i++) {
-            const label = devices[i].label.toLowerCase();
+        // วนหาเลนส์กล้องหลังที่ไม่ใช่ Wide/Ultra
+        for (const device of devices) {
+            const label = device.label.toLowerCase();
             if ((label.includes('back') || label.includes('rear')) && 
                 !label.includes('wide') && !label.includes('ultra') && !label.includes('0.5')) {
-                currentDeviceIndex = i;
-                return devices[i].deviceId;
+                return device.deviceId;
             }
         }
         return devices[0].deviceId;
@@ -195,42 +201,40 @@
 
     function startDecoding(deviceId) {
         codeReader.reset();
-        document.getElementById('status').innerText = "เล็งบาร์โค้ดให้อยู่ในกรอบ";
+        document.getElementById('status').innerText = "พร้อมสแกน";
         document.getElementById('status').style.color = "#333";
         isScanning = true;
 
         codeReader.decodeFromVideoDevice(deviceId, 'video', (result, err) => {
             if (result && isScanning) {
-                // ป้องกันการอ่านซ้ำรัวๆ
-                isScanning = false; 
-                
+                isScanning = false; // ล็อคไม่ให้อ่านซ้ำ
                 playSound();
-                document.getElementById('status').innerText = "✅ กำลังส่งข้อมูล...";
+                
+                // แสดงผล User เห็นว่าอ่านได้แล้ว
+                document.getElementById('status').innerText = "✅ อ่านรหัส: " + result.text;
                 document.getElementById('status').style.color = "#28a745";
                 
-                // หยุดกล้องชั่วคราวเพื่อประหยัดแบตระหว่างส่ง
-                codeReader.reset(); 
-                
                 sendMessage(result.text);
+                codeReader.reset(); // หยุดกล้อง
             }
         });
     }
 
     document.getElementById('switchBtn').addEventListener('click', () => {
-        if (videoInputDevices.length < 2) return;
-        currentDeviceIndex = (currentDeviceIndex + 1) % videoInputDevices.length;
-        selectedDeviceId = videoInputDevices[currentDeviceIndex].deviceId;
+        // สลับกล้องวนไปเรื่อยๆ
+        const currentIndex = videoInputDevices.findIndex(d => d.deviceId === selectedDeviceId);
+        const nextIndex = (currentIndex + 1) % videoInputDevices.length;
+        selectedDeviceId = videoInputDevices[nextIndex].deviceId;
         startDecoding(selectedDeviceId);
     });
 
     async function sendMessage(text) {
-      // Format ข้อความ: เลขบาร์โค้ด + จำนวน 1 ชิ้น
-      const msg = `${text} 1 ชิ้น`; 
+      // *** แก้ไข: ส่งแค่ตัวเลขเพียวๆ (ลบคำว่า 1 ชิ้น ออกแล้ว) ***
+      const msg = text; 
 
       if (!liff.isInClient()) {
-        alert("Simulate Send:\n" + msg);
-        // รีเซ็ตให้สแกนต่อได้ทันทีถ้าเทสบนคอม
-        setTimeout(() => startDecoding(selectedDeviceId), 1000); 
+        alert("Test Mode: " + msg);
+        setTimeout(() => startDecoding(selectedDeviceId), 1000);
         return;
       }
 
@@ -239,8 +243,7 @@
         liff.closeWindow();
       } catch (err) {
         alert('ส่งไม่สำเร็จ: ' + err);
-        // ถ้าส่งไม่ผ่าน ให้กลับมาเปิดกล้องสแกนใหม่
-        startDecoding(selectedDeviceId);
+        startDecoding(selectedDeviceId); // ถ้าส่งไม่ผ่าน ให้สแกนใหม่
       }
     }
 
@@ -250,10 +253,10 @@
         const g = ctx.createGain();
         osc.connect(g);
         g.connect(ctx.destination);
-        osc.frequency.value = 1800; // เสียงสูงแหลมจะได้ยินชัด
+        osc.frequency.value = 1500; 
         g.gain.value = 0.1;
         osc.start();
-        setTimeout(() => osc.stop(), 150);
+        setTimeout(() => osc.stop(), 100);
     }
 
     initLIFF();
